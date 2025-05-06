@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Генетика фей</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f8ff; color: #222; }
+    .fairy-info { margin: 2em 0; padding: 1em; background: #e6f7ff; border-radius: 8px; max-width: 400px; }
+    .fairy-info h2 { margin-top: 0; }
+    .fairy-param { margin: 0.5em 0; }
+  </style>
+</head>
+<body>
+  <h1>Генетика фей</h1>
+  <div class="fairy-info" id="fairyInfo"></div>
+  <button onclick="generateFairy()">Сгенерировать новую фею</button>
+  <button onclick="crossFairies()">Скрестить</button>
+  <div id="crossResult"></div>
+  <script>
+    function randomAllele(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    const WINGS_DOMINANCE = ['B', 'R', 'Y', 'G'];
+    const SIZE_DOMINANCE = ['F', 'S', 'A'];
+    const EYES_DOMINANCE = ['E', 'V', 'G', 'C'];
+    const WINGS_COLORS = {B: 'Синие', R: 'Красные', Y: 'Жёлтые', G: 'Зелёные'};
+    const SIZE_TYPES = {F: 'Пышная', S: 'Худая', A: 'Угловатая'};
+    const EYES_COLORS = {E: 'Голубые', V: 'Фиолетовые', G: 'Зелёные', C: 'Карие'};
+
+    const FEMALE_NAMES = [
+      'Люси','Мия','Зара','Астра','Флора','Эльза','Тина','Грета','Селеста','Виола',
+      'Лира','Сильва','Роза','Делия','Феяна','Мелисса','Агата','Лея','Сирена','Джулия',
+      'Элли','Клара','Луна','Сабрина','Веста','Ирис','Фелиция','Глория','Риана','Тереза'
+    ];
+    const MALE_NAMES = [
+      'Финн','Лео','Оскар','Тео','Макс','Реми','Дилан','Лукас','Эдгар','Виктор',
+      'Саймон','Гай','Рик','Тимон','Эрик','Джастин','Крис','Сэм','Даниэль','Рэй',
+      'Томас','Грей','Ларс','Феликс','Мартин','Руди','Брайан','Джон','Питер','Адам'
+    ];
+
+    // Половые аллели: XX = ж, XY = м
+    const SEX_ALLELES = ['X', 'Y'];
+    function randomSexAlleles(sex) {
+      if (sex === 'ж') return ['X', 'X'];
+      return ['X', 'Y'];
+    }
+    function randomSexFromAlleles(alleles) {
+      return (alleles[0] === 'X' && alleles[1] === 'X') ? 'ж' : 'м';
+    }
+    function randomName(sex) {
+      if (sex === 'ж') return FEMALE_NAMES[Math.floor(Math.random()*FEMALE_NAMES.length)];
+      return MALE_NAMES[Math.floor(Math.random()*MALE_NAMES.length)];
+    }
+    function getPhenotype(alleles, dominance, names) {
+      for (let d of dominance) if (alleles.includes(d)) return names[d];
+      return 'Неизвестно';
+    }
+    function fairyDescription(fairy) {
+      return `Крылья - ${getPhenotype(fairy.wings, WINGS_DOMINANCE, WINGS_COLORS)}, ` +
+             `Размер - ${getPhenotype(fairy.size, SIZE_DOMINANCE, SIZE_TYPES)}, ` +
+             `Глаза - ${getPhenotype(fairy.eyes, EYES_DOMINANCE, EYES_COLORS)}`;
+    }
+    function generateRandomFairy(sex = null) {
+      // Если sex не задан, выбираем случайно
+      if (!sex) sex = Math.random() < 0.5 ? 'ж' : 'м';
+      const sexAlleles = randomSexAlleles(sex);
+      return {
+        name: randomName(sex),
+        sex,
+        sexAlleles,
+        wings: [randomAllele(WINGS_DOMINANCE), randomAllele(WINGS_DOMINANCE)],
+        size: [randomAllele(SIZE_DOMINANCE), randomAllele(SIZE_DOMINANCE)],
+        eyes: [randomAllele(EYES_DOMINANCE), randomAllele(EYES_DOMINANCE)]
+      };
+    }
+    function renderFairy(fairy, targetId = 'fairyInfo') {
+      const sexStr = fairy.sex === 'ж' ? 'Женский' : 'Мужской';
+      document.getElementById(targetId).innerHTML =
+        `<h2>${fairy.name} (${sexStr})</h2>` +
+        `<div class="fairy-param"><b>Половые хромосомы:</b> ${fairy.sexAlleles.join(', ')}</div>` +
+        `<div class="fairy-param"><b>Крылья:</b> ${getPhenotype(fairy.wings, WINGS_DOMINANCE, WINGS_COLORS)} (${fairy.wings.join(', ')})</div>` +
+        `<div class="fairy-param"><b>Размер:</b> ${getPhenotype(fairy.size, SIZE_DOMINANCE, SIZE_TYPES)} (${fairy.size.join(', ')})</div>` +
+        `<div class="fairy-param"><b>Глаза:</b> ${getPhenotype(fairy.eyes, EYES_DOMINANCE, EYES_COLORS)} (${fairy.eyes.join(', ')})</div>`;
+    }
+    let currentFairy = generateRandomFairy();
+    function generateFairy() {
+      currentFairy = generateRandomFairy();
+      renderFairy(currentFairy);
+      document.getElementById('crossResult').innerHTML = '';
+    }
+
+    // Скрешивание
+    function crossFairies() {
+      // Определяем противоположный пол
+      const partnerSex = currentFairy.sex === 'ж' ? 'м' : 'ж';
+      const partner = generateRandomFairy(partnerSex);
+      // Потомок получает по одному аллелю от каждого родителя
+      function childAlleles(a1, a2) {
+        return [a1[Math.floor(Math.random()*2)], a2[Math.floor(Math.random()*2)]];
+      }
+      // Половые хромосомы: мать всегда даёт X, отец даёт X или Y
+      let childSexAlleles, childSex;
+      if (currentFairy.sex === 'ж') {
+        // мать: XX, отец: XY
+        childSexAlleles = ['X', partner.sexAlleles[Math.floor(Math.random()*2)]];
+      } else {
+        // мать: XX, отец: XY
+        childSexAlleles = [partner.sexAlleles[0], currentFairy.sexAlleles[Math.floor(Math.random()*2)]];
+      }
+      childSex = randomSexFromAlleles(childSexAlleles);
+      const child = {
+        name: randomName(childSex),
+        sex: childSex,
+        sexAlleles: childSexAlleles,
+        wings: childAlleles(currentFairy.wings, partner.wings),
+        size: childAlleles(currentFairy.size, partner.size),
+        eyes: childAlleles(currentFairy.eyes, partner.eyes)
+      };
+      // Выводим родителей и потомка
+      let html = '<h3>Родители</h3>';
+      html += '<div style="margin-bottom:1em">' +
+        `<b>${currentFairy.name}</b> (${currentFairy.sex === 'ж' ? 'Ж' : 'М'})<br>` +
+        `Половые хромосомы: ${currentFairy.sexAlleles.join(', ')}<br>` +
+        fairyDescription(currentFairy) +
+        '</div>';
+      html += '<div style="margin-bottom:1em">' +
+        `<b>${partner.name}</b> (${partner.sex === 'ж' ? 'Ж' : 'М'})<br>` +
+        `Половые хромосомы: ${partner.sexAlleles.join(', ')}<br>` +
+        fairyDescription(partner) +
+        '</div>';
+      html += '<h3>Потомок</h3>';
+      html += `<div><b>${child.name}</b> (${child.sex === 'ж' ? 'Ж' : 'М'})<br>` +
+        `Половые хромосомы: ${child.sexAlleles.join(', ')}<br>` +
+        fairyDescription(child) + '</div>';
+      document.getElementById('crossResult').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
